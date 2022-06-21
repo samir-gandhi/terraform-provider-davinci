@@ -1,16 +1,14 @@
 package main
 
 import (
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
-
-  "terraform-provider-davinci/davinci"
+	"context"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"terraform-provider-davinci/davinci"
 )
 
 func main() {
-  plugin.Serve(&plugin.ServeOpts{
-    ProviderFunc: func() *schema.Provider {
-      return davinci.Provider()
-    },
-  })
+	tfsdk.Serve(context.Background(), davinci.New, tfsdk.ServeOpts{
+		Name: "davinci",
+	})
 }
+

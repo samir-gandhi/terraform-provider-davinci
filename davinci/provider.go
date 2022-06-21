@@ -1,23 +1,23 @@
 package davinci
 
 import (
-  "context"
+	"context"
 
-  "github.com/samir-gandhi/davinci-client-go"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/samir-gandhi/davinci-client-go"
 )
 
 // Provider -
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"username": &schema.Schema{
+			"username": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("DAVINCI_USERNAME", nil),
 			},
-			"password": &schema.Schema{
+			"password": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
@@ -26,32 +26,55 @@ func Provider() *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{},
 		DataSourcesMap: map[string]*schema.Resource{
-			"hashicups_coffees": dataSourceCoffees(),
+			"davinci_customers": dataSourceCustomers(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-  username := d.Get("username").(string)
-  password := d.Get("password").(string)
+	username := d.Get("username").(string)
+	password := d.Get("password").(string)
 
-  // Warning or errors can be collected in a slice type
-  var diags diag.Diagnostics
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+	diags = append(diags, diag.Diagnostic{
+		Severity: diag.Warning,
+		Summary:  "Warning Message Summary",
+		Detail:   "This is the detailed warning message from providerConfigure",
+	})
+	var c *davinci.Client
 
-  if (username != "") && (password != "") {
-    c, err := davinci.NewClient(nil, &username, &password)
-    if err != nil {
-      return nil, diag.FromErr(err)
-    }
+	if (username != "") && (password != "") {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "User or Password Not Provided",
+			Detail:   "Unable to auth user",
+		})
+	}
 
-    return c, diags
-  }
+	if (username != "") && (password != "") {
+		c, err := davinci.NewClient(nil, &username, &password)
+		if err != nil {
+      diags = append(diags, diag.Diagnostic{
+        Severity: diag.Error,
+        Summary:  "Unable to create Davinci client",
+        Detail:   "Unable to auth user",
+      })
+      return nil, diags
+		}
 
-  c, err := davinci.NewClient(nil, nil, nil)
-  if err != nil {
-    return nil, diag.FromErr(err)
-  }
+		return c, diags
+	}
 
-  return c, diags
+	// c, err := davinci.NewClient(nil, nil, nil)
+	// if err != nil {
+	// 	diags = append(diags, diag.Diagnostic{
+	// 		Severity: diag.Error,
+	// 		Summary:  "Unable to create Davinci client",
+	// 		Detail:   "Unable to auth user",
+	// 	})
+	// }
+
+	return c, diags
 }
