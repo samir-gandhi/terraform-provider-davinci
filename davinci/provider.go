@@ -2,79 +2,162 @@ package davinci
 
 import (
 	"context"
+	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/samir-gandhi/davinci-client-go"
 )
 
-// Provider -
-func Provider() *schema.Provider {
-	return &schema.Provider{
-		Schema: map[string]*schema.Schema{
-			"username": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("DAVINCI_USERNAME", nil),
-			},
-			"password": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("DAVINCI_PASSWORD", nil),
-			},
-		},
-		ResourcesMap: map[string]*schema.Resource{},
-		DataSourcesMap: map[string]*schema.Resource{
-			"davinci_customers": dataSourceCustomers(),
-		},
-		ConfigureContextFunc: providerConfigure,
-	}
+var stderr = os.Stderr
+
+func New() tfsdk.Provider {
+	return &provider{}
 }
 
-func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	username := d.Get("username").(string)
-	password := d.Get("password").(string)
+type provider struct {
+	configured bool
+	client *davinci.Client
+}
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-	diags = append(diags, diag.Diagnostic{
-		Severity: diag.Warning,
-		Summary:  "Warning Message Summary",
-		Detail:   "This is the detailed warning message from providerConfigure",
-	})
-	var c *davinci.Client
+func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		Attributes: map[string]tfsdk.Attribute{
+			"host": {
+				Type: types.StringType,
+				Optional: true,
+				Computed: true,
+			},
+			"username": {
+				Type:     types.StringType,
+				Optional: true,
+				Computed: true,
+		},
+		"password": {
+				Type:      types.StringType,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
+		},
+		},
+	}, nil
+}
 
-	if (username != "") && (password != "") {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  "User or Password Not Provided",
-			Detail:   "Unable to auth user",
-		})
+type providerData struct {
+	Username types.String `tfsdk:"username"`
+	Host     types.String `tfsdk:"host"`
+	Password types.String `tfsdk:"password"`
+}
+
+func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
+	var config providerData
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	if (username != "") && (password != "") {
-		c, err := davinci.NewClient(nil, &username, &password)
-		if err != nil {
-      diags = append(diags, diag.Diagnostic{
-        Severity: diag.Error,
-        Summary:  "Unable to create Davinci client",
-        Detail:   "Unable to auth user",
-      })
-      return nil, diags
-		}
-
-		return c, diags
+	var username string
+	if config.Username.Unknown {
+		// Cannot connect to client with an unknown value
+		resp.Diagnostics.AddWarning(
+			"Unable to create client",
+			"Cannot use unknown value as username",
+		)
+		return
 	}
 
-	// c, err := davinci.NewClient(nil, nil, nil)
-	// if err != nil {
-	// 	diags = append(diags, diag.Diagnostic{
-	// 		Severity: diag.Error,
-	// 		Summary:  "Unable to create Davinci client",
-	// 		Detail:   "Unable to auth user",
-	// 	})
-	// }
+	if config.Username.Null {
+		username = os.Getenv("HASHICUPS_USERNAME")
+	} else {
+		username = config.Username.Value
+	}
 
-	return c, diags
+	if username == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find username",
+			"Username cannot be an empty string",
+		)
+		return
+	}
+
+	// User must provide a password to the provider
+	var password string
+	if config.Password.Unknown {
+		// Cannot connect to client with an unknown value
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Cannot use unknown value as password",
+		)
+		return
+	}
+
+	if config.Password.Null {
+		password = os.Getenv("HASHICUPS_PASSWORD")
+	} else {
+		password = config.Password.Value
+	}
+
+	if password == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find password",
+			"password cannot be an empty string",
+		)
+		return
+	}
+
+	// User must specify a host
+	var host string
+	if config.Host.Unknown {
+		// Cannot connect to client with an unknown value
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Cannot use unknown value as host",
+		)
+		return
+	}
+
+	if config.Host.Null {
+		host = os.Getenv("HASHICUPS_HOST")
+	} else {
+		host = config.Host.Value
+	}
+
+	if host == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find host",
+			"Host cannot be an empty string",
+		)
+		return
+	}
+
+	// Create a new HashiCups client and set it to the provider client
+	c, err := davinci.NewClient(&host, &username, &password)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create hashicups client:\n\n"+err.Error(),
+		)
+		return
+	}
+
+	p.client = c
+	p.configured = true
+}
+
+// GetResources - Defines provider resources
+func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
+	return map[string]tfsdk.ResourceType{
+			"davinci_role": resourceRoleType{},
+	}, nil
+}
+
+// GetDataSources - Defines provider data sources
+func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
+	return map[string]tfsdk.DataSourceType{}, nil
 }
