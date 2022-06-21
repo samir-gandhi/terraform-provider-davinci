@@ -8,8 +8,8 @@ terraform {
 }
 
 provider "davinci" {
-  username = "education"
-  password = "test123"
+  # username = ""
+  # password = ""
 }
 
 data "davinci_customers" "customers" {}

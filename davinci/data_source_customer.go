@@ -2,6 +2,7 @@ package davinci
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -23,35 +24,35 @@ func dataSourceCustomers() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"companyId": {
+						"company_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"clientId": {
+						"client_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"firstName": {
+						"first_name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"lastName": {
+						"last_name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"phoneNumber": {
+						"phone_number": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"createdByCustomerId": {
+						"created_by_customer_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"createdByCompanyId": {
+						"created_by_company_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"emailVerified": {
+						"email_verified": {
 							Type:     schema.TypeBool,
 							Computed: true,
 						},
@@ -66,34 +67,34 @@ func dataSourceCustomers() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"customerType": {
+						"customer_type": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"createdDate": {
+						"created_date": {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"emailVerifiedDate": {
+						"email_verified_date": {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"skUserId": {
+						"sk_user_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"lastLogin": {
+						"last_login": {
 							Type:     schema.TypeInt,
 							Computed: true,
 						},
-						"customerId": {
+						"customer_id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
 					},
 				},
 			},
-			"customerCount": {
+			"customer_count": {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
@@ -108,25 +109,43 @@ func dataSourceCustomersRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	customers, err := c.GetCustomers(&c.CompanyID, nil)
 	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  "Unable to create Davinci client",
-			Detail:   "Unable to auth user",
-		})
+    return diag.FromErr(err)
 	}
-	if err := d.Set("customers", customers); err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  "Unable to create Davinci client",
-			Detail:   "Unable to auth user",
-		})
+	if err := d.Set("customer_count", customers.CustomerCount); err != nil {
+		return diag.FromErr(err)
 	}
+	// if err := d.Set("customers", customers.Customers); err != nil {
+  //   return diag.FromErr(err)
+	// }
 
+
+	custs := make([]interface{}, 0, len(customers.Customers))
+	for i, _ := range custs {
+
+		custs = append(custs, map[string]interface{}{
+			"email": customers.Customers[i].Email,
+			"company_id": customers.Customers[i].CompanyID,
+			"client_id": customers.Customers[i].ClientID,
+			"first_name": customers.Customers[i].FirstName,
+			"last_name": customers.Customers[i].LastName,
+			"phone_number": customers.Customers[i].PhoneNumber,
+			"created_by_customer_id": customers.Customers[i].CreatedByCustomerID,
+			"created_by_company_id": customers.Customers[i].CreatedByCompanyID,
+			"email_verified": customers.Customers[i].EmailVerified,
+			"companies": customers.Customers[i].Companies,
+			"status": customers.Customers[i].Status,
+			"customer_type": customers.Customers[i].CustomerType,
+			"created_date": customers.Customers[i].CustomerType,
+			"email_verified_date": customers.Customers[i].EmailVerifiedDate,
+			"sk_user_id": customers.Customers[i].SkUserID,
+			"last_login": customers.Customers[i].LastLogin,
+			"customer_id": customers.Customers[i].CustomerID,
+		})
+	}
+	
+	d.Set("customers", custs)
+	
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-	diags = append(diags, diag.Diagnostic{
-		Severity: diag.Error,
-		Summary:  "Unable to create Davinci client",
-		Detail:   "Unable to auth user",
-	})
+	fmt.Printf("customer count is: %d",d.Get("customer_count"))
 	return diags
 }
