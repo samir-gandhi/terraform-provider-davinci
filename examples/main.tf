@@ -14,6 +14,11 @@ provider "davinci" {
 
 data "davinci_customers" "customers" {}
 
+output "customers" {
+  value = data.davinci_customers.customers
+  
+}
+
 # module "tdf" {
 #   source = "./customers"
 #   customer_name = "tempdvflows"

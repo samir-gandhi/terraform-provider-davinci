@@ -45,25 +45,25 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		Detail:   "This is the detailed warning message from providerConfigure",
 	})
 	var c *davinci.Client
-	
+
 	// if (username != "") && (password != "") {
-		// 	diags = append(diags, diag.Diagnostic{
-			// 		Severity: diag.Error,
-			// 		Summary:  "User or Password Not Provided",
-			// 		Detail:   "Unable to auth user",
-			// 	})
-			// }
-			
+	// 	diags = append(diags, diag.Diagnostic{
+	// 		Severity: diag.Error,
+	// 		Summary:  "User or Password Not Provided",
+	// 		Detail:   "Unable to auth user",
+	// 	})
+	// }
+
 	if (username != "") && (password != "") {
-		fmt.Printf("username is: %s",username)
+		fmt.Printf("username is: %s", username)
 		c, err := davinci.NewClient(nil, &username, &password)
 		if err != nil {
-      diags = append(diags, diag.Diagnostic{
-        Severity: diag.Error,
-        Summary:  "Unable to create Davinci client",
-        Detail:   "Unable to auth user",
-      })
-      return nil, diags
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "Unable to create Davinci client",
+				Detail:   "Unable to auth user",
+			})
+			return nil, diags
 		}
 
 		return c, diags

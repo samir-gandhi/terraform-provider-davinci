@@ -5,6 +5,6 @@ provider "samir-gandhi/pingidentity/davinci" {
   version     = "0.0.1"
   constraints = "0.0.1"
   hashes = [
-    "h1:mZQrlmbfxV3c9XT2q76gpJIsJzfKByd2p++wwS2tV2A=",
+    "h1:ynfZxZX6z7I7/xLNbCp7koLSecv8X/D4goOyrp9csr0=",
   ]
 }

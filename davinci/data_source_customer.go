@@ -109,43 +109,42 @@ func dataSourceCustomersRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	customers, err := c.GetCustomers(&c.CompanyID, nil)
 	if err != nil {
-    return diag.FromErr(err)
+		return diag.FromErr(err)
 	}
 	if err := d.Set("customer_count", customers.CustomerCount); err != nil {
 		return diag.FromErr(err)
 	}
 	// if err := d.Set("customers", customers.Customers); err != nil {
-  //   return diag.FromErr(err)
+	//   return diag.FromErr(err)
 	// }
-
 
 	custs := make([]interface{}, 0, len(customers.Customers))
 	for i, _ := range custs {
 
 		custs = append(custs, map[string]interface{}{
-			"email": customers.Customers[i].Email,
-			"company_id": customers.Customers[i].CompanyID,
-			"client_id": customers.Customers[i].ClientID,
-			"first_name": customers.Customers[i].FirstName,
-			"last_name": customers.Customers[i].LastName,
-			"phone_number": customers.Customers[i].PhoneNumber,
+			"email":                  customers.Customers[i].Email,
+			"company_id":             customers.Customers[i].CompanyID,
+			"client_id":              customers.Customers[i].ClientID,
+			"first_name":             customers.Customers[i].FirstName,
+			"last_name":              customers.Customers[i].LastName,
+			"phone_number":           customers.Customers[i].PhoneNumber,
 			"created_by_customer_id": customers.Customers[i].CreatedByCustomerID,
-			"created_by_company_id": customers.Customers[i].CreatedByCompanyID,
-			"email_verified": customers.Customers[i].EmailVerified,
-			"companies": customers.Customers[i].Companies,
-			"status": customers.Customers[i].Status,
-			"customer_type": customers.Customers[i].CustomerType,
-			"created_date": customers.Customers[i].CustomerType,
-			"email_verified_date": customers.Customers[i].EmailVerifiedDate,
-			"sk_user_id": customers.Customers[i].SkUserID,
-			"last_login": customers.Customers[i].LastLogin,
-			"customer_id": customers.Customers[i].CustomerID,
+			"created_by_company_id":  customers.Customers[i].CreatedByCompanyID,
+			"email_verified":         customers.Customers[i].EmailVerified,
+			"companies":              customers.Customers[i].Companies,
+			"status":                 customers.Customers[i].Status,
+			"customer_type":          customers.Customers[i].CustomerType,
+			"created_date":           customers.Customers[i].CustomerType,
+			"email_verified_date":    customers.Customers[i].EmailVerifiedDate,
+			"sk_user_id":             customers.Customers[i].SkUserID,
+			"last_login":             customers.Customers[i].LastLogin,
+			"customer_id":            customers.Customers[i].CustomerID,
 		})
 	}
-	
+
 	d.Set("customers", custs)
-	
+
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-	fmt.Printf("customer count is: %d",d.Get("customer_count"))
+	fmt.Printf("customer count is: %d", d.Get("customer_count"))
 	return diags
 }
